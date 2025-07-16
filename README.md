@@ -137,7 +137,13 @@ bench use shah-printing.local
 bench --site shah-printing.local install-app erpnext
 ```
 
-### Step 12: Add Site to Hosts File
+### Step 12: Build Assets
+```bash
+# Build all JavaScript and CSS assets
+bench build
+```
+
+### Step 13: Add Site to Hosts File
 **⚠️ IMPORTANT: Open a NEW Terminal window for this step (needs sudo)**
 
 ```bash
@@ -155,7 +161,7 @@ Save the file:
 
 ## Starting ERPNext
 
-### Step 13: Start the Application
+### Step 14: Start the Application
 Back in your original Terminal window:
 ```bash
 # Make sure you're in frappe-bench directory
@@ -168,7 +174,7 @@ source env/bin/activate
 bench start
 ```
 
-### Step 14: Access ERPNext
+### Step 15: Access ERPNext
 Open your web browser and go to:
 - http://localhost:8000
 - OR http://shah-printing.local:8000
@@ -201,6 +207,16 @@ bench start
 Make sure MariaDB is running:
 ```bash
 brew services restart mariadb
+```
+
+### If logo or styling looks broken:
+Build the assets:
+```bash
+# Navigate to frappe-bench directory
+cd ~/personal-workspace/shah-erp/frappe-bench
+
+# Build all assets
+bench build
 ```
 
 ## Daily Usage
