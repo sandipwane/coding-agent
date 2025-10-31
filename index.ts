@@ -1,18 +1,20 @@
-import Anthropic from "@anthropic-ai/sdk";
+import AnthropicBedrock from "@anthropic-ai/bedrock-sdk";
 
-// Initialize the Anthropic client
-// Bun automatically loads .env, so ANTHROPIC_API_KEY will be read from .env file
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
+// Initialize the Anthropic Bedrock client
+// Bun automatically loads .env, so AWS credentials will be read from .env file
+const anthropic = new AnthropicBedrock({
+  awsAccessKey: process.env.AWS_ACCESS_KEY_ID,
+  awsSecretKey: process.env.AWS_SECRET_ACCESS_KEY,
+  awsRegion: process.env.AWS_REGION || "us-east-1",
 });
 
 async function main() {
-  console.log("Starting Anthropic SDK example...\n");
+  console.log("Starting Anthropic Bedrock SDK example...\n");
 
   try {
-    // Create a message using Claude
+    // Create a message using Claude via AWS Bedrock
     const message = await anthropic.messages.create({
-      model: "claude-3-5-sonnet-20241022",
+      model: "anthropic.claude-3-5-sonnet-20241022-v2:0",
       max_tokens: 1024,
       messages: [
         {
