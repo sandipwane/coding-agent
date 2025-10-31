@@ -1,18 +1,16 @@
-import AnthropicBedrock from "@anthropic-ai/bedrock-sdk";
+import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
+import { streamText } from "ai";
+import type { ModelMessage } from "ai";
 import * as readline from "node:readline";
 
-enum Role {
-  User = "user",
-  Assistant = "assistant",
-}
-type Message = { role: Role; content: string };
 type EndPrompt = "exit" | "quit";
 const END_PROMPTS: readonly EndPrompt[] = ["exit", "quit"];
 
-const anthropic = new AnthropicBedrock({
-  awsAccessKey: process.env.AWS_ACCESS_KEY_ID,
-  awsSecretKey: process.env.AWS_SECRET_ACCESS_KEY,
-  awsRegion: process.env.AWS_REGION || "us-east-1",
+// Initialize Bedrock with Vercel AI SDK
+const bedrock = createAmazonBedrock({
+  region: process.env.AWS_REGION || "us-east-1",
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
 });
 
 const rl = readline.createInterface({
@@ -35,7 +33,7 @@ async function main() {
   console.log("Claude: ready. Type your questions and press Enter to chat.");
   console.log("");
 
-  const conversationHistory: Message[] = [];
+  const conversationHistory: ModelMessage[] = [];
 
   while (true) {
     try {
@@ -55,36 +53,33 @@ async function main() {
 
       // Store user message in history
       conversationHistory.push({
-        role: Role.User,
+        role: "user",
         content: userMessage,
       });
 
-      // Send message to Claude via Bedrock
-      const message = await anthropic.messages.create({
-        model: "anthropic.claude-3-5-sonnet-20240620-v1:0",
-        max_tokens: 2048,
+      // Stream response from Claude via Bedrock
+      console.log("");
+      process.stdout.write("> ");
+
+      let fullResponse = "";
+      const result = await streamText({
+        model: bedrock("anthropic.claude-3-5-sonnet-20240620-v1:0"),
         messages: conversationHistory,
       });
 
-      // Extract the assistant's response
-      const textContent = message.content.find(
-        (block) => block.type === "text"
-      );
-      if (textContent && textContent.type === "text") {
-        const assistantResponse = textContent.text;
-
-        // Print the response
-        console.log("")
-        console.log(">", assistantResponse);
-
-        // Store assistant's response in history
-        conversationHistory.push({
-          role: Role.Assistant,
-          content: assistantResponse,
-        });
+      // Stream the response to console as it arrives
+      for await (const textPart of result.textStream) {
+        process.stdout.write(textPart);
+        fullResponse += textPart;
       }
 
-      console.log("");
+      // Store assistant's response in history
+      conversationHistory.push({
+        role: "assistant",
+        content: fullResponse,
+      });
+
+      console.log("\n");
     } catch (error) {
       if (error instanceof Error) {
         console.error("[Error]:", error.message);
