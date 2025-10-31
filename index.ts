@@ -25,10 +25,13 @@ function getUserInput(prompt: string): Promise<string> {
 }
 
 async function main() {
-  console.log("🤖 Interactive Chat with Claude via AWS Bedrock");
   console.log("================================================");
+  console.log("  Interactive Chat with Claude via AWS Bedrock");
+  console.log("================================================");
+  console.log("");
   console.log("Type your message and press Enter to chat.");
-  console.log("Type 'exit' or 'quit' to end the conversation.\n");
+  console.log("Type 'exit' or 'quit' to end the conversation.");
+  console.log("");
 
   // Store conversation history
   const conversationHistory: Array<{
@@ -47,7 +50,9 @@ async function main() {
         userMessage.trim().toLowerCase() === "exit" ||
         userMessage.trim().toLowerCase() === "quit"
       ) {
-        console.log("\n👋 Goodbye! Ending conversation.");
+        console.log("");
+        console.log("Goodbye! Ending conversation.");
+        console.log("");
         break;
       }
 
@@ -63,7 +68,7 @@ async function main() {
       });
 
       // Send message to Claude via Bedrock
-      console.log("\n🤔 Claude is thinking...\n");
+      console.log("");
 
       const message = await anthropic.messages.create({
         model: "anthropic.claude-3-5-sonnet-20241022-v2:0",
@@ -79,8 +84,8 @@ async function main() {
         const assistantResponse = textContent.text;
 
         // Display the response
-        console.log("Claude:", assistantResponse);
-        console.log();
+        console.log("Assistant:", assistantResponse);
+        console.log("");
 
         // Add assistant's response to history
         conversationHistory.push({
@@ -91,15 +96,16 @@ async function main() {
 
       // Display token usage info
       console.log(
-        `📊 Tokens used - Input: ${message.usage.input_tokens}, Output: ${message.usage.output_tokens}\n`
+        `[Tokens: ${message.usage.input_tokens} in / ${message.usage.output_tokens} out]`
       );
+      console.log("");
     } catch (error) {
       if (error instanceof Error) {
-        console.error("❌ Error:", error.message);
+        console.error("[Error]:", error.message);
       } else {
-        console.error("❌ An unknown error occurred");
+        console.error("[Error]: An unknown error occurred");
       }
-      console.log();
+      console.log("");
     }
   }
 
