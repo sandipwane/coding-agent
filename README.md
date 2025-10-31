@@ -1,4 +1,4 @@
-# shah-erp
+# Coding Agent
 
 To install dependencies:
 
