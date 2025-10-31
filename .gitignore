@@ -1,65 +1,34 @@
-# Frappe/ERPNext specific
-frappe-bench/env/
-frappe-bench/apps/erpnext/
-frappe-bench/apps/frappe/
-frappe-bench/sites/*/private/
-frappe-bench/sites/*/public/files/
-frappe-bench/sites/*/logs/
-frappe-bench/sites/*/locks/
-frappe-bench/sites/assets/
-frappe-bench/sites/common_site_config.json
-frappe-bench/logs/
-frappe-bench/config/pids/
-frappe-bench/node_modules/
-frappe-bench/apps/*/node_modules/
+# dependencies (bun install)
+node_modules
 
-# Python
-*.py[cod]
-__pycache__/
-*.so
-.Python
-*.egg
-*.egg-info/
-dist/
-build/
-*.whl
+# output
+out
+dist
+*.tgz
 
-# Database
-*.db
-*.sqlite
-*.sqlite3
-*.rdb
+# code coverage
+coverage
+*.lcov
 
-# Logs
-*.log
-*.log.*
+# logs
+logs
+_.log
+report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
-# OS specific
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# Environment
+# dotenv environment variable files
 .env
-.venv
-env/
-venv/
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local
 
-# Backups
-*.bak
-*.backup
+# caches
+.eslintcache
+.cache
+*.tsbuildinfo
 
-# Temporary files
-*.tmp
-*.temp
+# IntelliJ based IDEs
+.idea
+
+# Finder (MacOS) folder config
+.DS_Store
