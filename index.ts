@@ -35,9 +35,10 @@ const handleExit = () => {
 process.on("beforeExit", handleExit);
 
 async function main() {
-  console.log("claude-cli v0.1");
+  console.log("\n"+"Claude CLI v0.1");
   console.log("------------------------------------------------");
-  console.log("Claude: ready. Type your questions and press Enter to chat.");
+  console.log("Type your questions and press Enter to chat.");
+  console.log("Type 'exit' or 'quit' to leave the chat.");
   console.log("");
 
   const conversationHistory: ModelMessage[] = [];
@@ -49,7 +50,7 @@ async function main() {
       // Check for exit commands
       const input = userMessage.trim().toLowerCase();
       if (input === "exit" || input === "quit") {
-        console.log(`\n${GOODBYE_MESSAGE}\n`);
+        handleExit();
         break;
       }
 
