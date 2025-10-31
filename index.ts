@@ -8,9 +8,9 @@ const END_PROMPTS: readonly EndPrompt[] = ["exit", "quit"];
 
 // Initialize Bedrock with Vercel AI SDK
 const bedrock = createAmazonBedrock({
-  region: process.env.AWS_REGION || "us-east-1",
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  region: Bun.env.AWS_REGION || "us-east-1",
+  accessKeyId: Bun.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: Bun.env.AWS_SECRET_ACCESS_KEY,
 });
 
 const rl = readline.createInterface({
