@@ -1,1 +1,1 @@
-{"dependencies":{"ai":"^5.0.83"},"name":"shah-erp","module":"index.ts","type":"module","private":true,"devDependencies":{"@types/bun":"latest"},"peerDependencies":{"typescript":"^5"}}
+{"dependencies":{"@anthropic-ai/sdk":"^0.68.0","ai":"^5.0.83"},"name":"shah-erp","module":"index.ts","type":"module","private":true,"devDependencies":{"@types/bun":"latest"},"peerDependencies":{"typescript":"^5"}}
