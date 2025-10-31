@@ -1,6 +1,14 @@
 import AnthropicBedrock from "@anthropic-ai/bedrock-sdk";
 import * as readline from "node:readline";
 
+enum Role {
+  User = "user",
+  Assistant = "assistant",
+}
+type Message = { role: Role; content: string };
+type EndPrompt = "exit" | "quit";
+const END_PROMPTS: readonly EndPrompt[] = ["exit", "quit"];
+
 const anthropic = new AnthropicBedrock({
   awsAccessKey: process.env.AWS_ACCESS_KEY_ID,
   awsSecretKey: process.env.AWS_SECRET_ACCESS_KEY,
@@ -22,42 +30,32 @@ function getUserInput(prompt: string): Promise<string> {
 }
 
 async function main() {
-  console.log("claude-cli v0.1 ");
+  console.log("claude-cli v0.1");
   console.log("------------------------------------------------");
   console.log("Claude: ready. Type your questions and press Enter to chat.");
   console.log("");
 
-  // Store conversation history
-  const conversationHistory: Array<{
-    role: "user" | "assistant";
-    content: string;
-  }> = [];
+  const conversationHistory: Message[] = [];
 
-  // Main conversation loop
   while (true) {
     try {
-      // Get user input
       const userMessage = await getUserInput("$ ");
 
-      // Check if user wants to exit
-      if (
-        userMessage.trim().toLowerCase() === "exit" ||
-        userMessage.trim().toLowerCase() === "quit"
-      ) {
+      if (END_PROMPTS.includes(userMessage.trim().toLowerCase() as EndPrompt)) {
         console.log("");
         console.log("Goodbye! Ending conversation.");
         console.log("");
         break;
       }
 
-      // Skip empty messages, when user presses Enter
+      // Skip when user presses Enter
       if (userMessage.trim() === "") {
         continue;
       }
 
-      // Add user message to history
+      // Store user message in history
       conversationHistory.push({
-        role: "user",
+        role: Role.User,
         content: userMessage,
       });
 
@@ -75,13 +73,13 @@ async function main() {
       if (textContent && textContent.type === "text") {
         const assistantResponse = textContent.text;
 
-        // Display the response
+        // Print the response
         console.log("")
-        console.log("> ", assistantResponse);
+        console.log(">", assistantResponse);
 
-        // Add assistant's response to history
+        // Store assistant's response in history
         conversationHistory.push({
-          role: "assistant",
+          role: Role.Assistant,
           content: assistantResponse,
         });
       }
