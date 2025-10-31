@@ -3,8 +3,7 @@ import { streamText } from "ai";
 import type { ModelMessage } from "ai";
 import * as readline from "node:readline";
 
-type EndPrompt = "exit" | "quit";
-const END_PROMPTS: readonly EndPrompt[] = ["exit", "quit"];
+const GOODBYE_MESSAGE = "Goodbye! Have a nice day!";
 
 // Initialize Bedrock with Vercel AI SDK
 const bedrock = createAmazonBedrock({
@@ -27,6 +26,14 @@ function getUserInput(prompt: string): Promise<string> {
   });
 }
 
+const handleExit = () => {
+  console.log(`${GOODBYE_MESSAGE}`);
+  rl.close();
+  process.exit(0);
+};
+
+process.on("beforeExit", handleExit);
+
 async function main() {
   console.log("claude-cli v0.1");
   console.log("------------------------------------------------");
@@ -39,10 +46,10 @@ async function main() {
     try {
       const userMessage = await getUserInput("$ ");
 
-      if (END_PROMPTS.includes(userMessage.trim().toLowerCase() as EndPrompt)) {
-        console.log("");
-        console.log("Goodbye! Have a nice day!");
-        console.log("");
+      // Check for exit commands
+      const input = userMessage.trim().toLowerCase();
+      if (input === "exit" || input === "quit") {
+        console.log(`\n${GOODBYE_MESSAGE}\n`);
         break;
       }
 
