@@ -41,7 +41,7 @@ async function main() {
 
       if (END_PROMPTS.includes(userMessage.trim().toLowerCase() as EndPrompt)) {
         console.log("");
-        console.log("Goodbye! Ending conversation.");
+        console.log("Goodbye! Have a nice day!");
         console.log("");
         break;
       }
