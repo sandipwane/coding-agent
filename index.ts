@@ -45,7 +45,7 @@ async function main() {
 
   while (true) {
     try {
-      const userMessage = await getUserInput("$ ");
+      const userMessage = await getUserInput("> ");
 
       // Check for exit commands
       const input = userMessage.trim().toLowerCase();
@@ -67,7 +67,7 @@ async function main() {
 
       // Stream response from Claude via Bedrock
       console.log("");
-      process.stdout.write("> ");
+      process.stdout.write("✶ ");
 
       let fullResponse = "";
       const result = await streamText({
