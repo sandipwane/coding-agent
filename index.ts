@@ -1,15 +1,12 @@
 import AnthropicBedrock from "@anthropic-ai/bedrock-sdk";
-import * as readline from "readline";
+import * as readline from "node:readline";
 
-// Initialize the Anthropic Bedrock client
-// Bun automatically loads .env, so AWS credentials will be read from .env file
 const anthropic = new AnthropicBedrock({
   awsAccessKey: process.env.AWS_ACCESS_KEY_ID,
   awsSecretKey: process.env.AWS_SECRET_ACCESS_KEY,
   awsRegion: process.env.AWS_REGION || "us-east-1",
 });
 
-// Create readline interface for user input
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
@@ -25,12 +22,9 @@ function getUserInput(prompt: string): Promise<string> {
 }
 
 async function main() {
-  console.log("================================================");
-  console.log("  Interactive Chat with Claude via AWS Bedrock");
-  console.log("================================================");
-  console.log("");
-  console.log("Type your message and press Enter to chat.");
-  console.log("Type 'exit' or 'quit' to end the conversation.");
+  console.log("claude-cli v0.1 ");
+  console.log("------------------------------------------------");
+  console.log("Claude: ready. Type your questions and press Enter to chat.");
   console.log("");
 
   // Store conversation history
@@ -43,7 +37,7 @@ async function main() {
   while (true) {
     try {
       // Get user input
-      const userMessage = await getUserInput("You: ");
+      const userMessage = await getUserInput("$ ");
 
       // Check if user wants to exit
       if (
@@ -56,7 +50,7 @@ async function main() {
         break;
       }
 
-      // Skip empty messages
+      // Skip empty messages, when user presses Enter
       if (userMessage.trim() === "") {
         continue;
       }
@@ -68,10 +62,8 @@ async function main() {
       });
 
       // Send message to Claude via Bedrock
-      console.log("");
-
       const message = await anthropic.messages.create({
-        model: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+        model: "anthropic.claude-3-5-sonnet-20240620-v1:0",
         max_tokens: 2048,
         messages: conversationHistory,
       });
@@ -84,8 +76,8 @@ async function main() {
         const assistantResponse = textContent.text;
 
         // Display the response
-        console.log("Assistant:", assistantResponse);
-        console.log("");
+        console.log("")
+        console.log("> ", assistantResponse);
 
         // Add assistant's response to history
         conversationHistory.push({
@@ -94,10 +86,6 @@ async function main() {
         });
       }
 
-      // Display token usage info
-      console.log(
-        `[Tokens: ${message.usage.input_tokens} in / ${message.usage.output_tokens} out]`
-      );
       console.log("");
     } catch (error) {
       if (error instanceof Error) {
@@ -105,7 +93,6 @@ async function main() {
       } else {
         console.error("[Error]: An unknown error occurred");
       }
-      console.log("");
     }
   }
 
