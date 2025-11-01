@@ -32,7 +32,7 @@ const handleExit = () => {
   process.exit(0);
 };
 
-process.on("beforeExit", handleExit);
+process.on("SIGINT", handleExit);
 
 async function main() {
   console.log("\n"+"Claude CLI v0.1");
