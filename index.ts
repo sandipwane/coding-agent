@@ -37,7 +37,7 @@ process.on("SIGINT", handleExit);
 const tools = {
   readFile: tool({
     description: "Read the contents of a file from the filesystem",
-    parameters: z.object({
+    inputSchema: z.object({
       filePath: z.string().describe("The path to the file to read"),
     }),
     execute: async ({ filePath }) => {
@@ -46,16 +46,16 @@ const tools = {
         const exists = await file.exists();
 
         if (!exists) {
-          return { error: `File not found: ${filePath}` };
+          return `Error: File not found: ${filePath}`;
         }
 
         const content = await file.text();
-        return { content };
+        return content;
       } catch (error) {
         if (error instanceof Error) {
-          return { error: `Error reading file: ${error.message}` };
+          return `Error reading file: ${error.message}`;
         }
-        return { error: "Unknown error reading file" };
+        return "Unknown error reading file";
       }
     },
   }),
@@ -104,37 +104,18 @@ async function main() {
 
       console.log("\n");
 
-      // Wait for the complete response to get tool calls
-      const { toolCalls, toolResults } = await result;
+      // Wait for the response to get messages (includes tool calls and results)
+      const response = await result.response;
 
-      // Build assistant message with tool calls if they exist
-      const assistantMessage: ModelMessage = {
-        role: "assistant",
-        content: fullResponse,
-      };
+      // Add all response messages to conversation history
+      // response.messages includes assistant message with tool calls and tool results
+      conversationHistory.push(...response.messages);
 
-      if (toolCalls && toolCalls.length > 0) {
-        assistantMessage.toolCalls = toolCalls;
-      }
-
-      conversationHistory.push(assistantMessage);
-
-      // If there were tool calls, add tool results to history and show them
+      // Show tool results to user if any
+      const toolResults = await result.toolResults;
       if (toolResults && toolResults.length > 0) {
-        console.log("[Tool Results]");
-        for (const toolResult of toolResults) {
-          console.log(
-            `  ${toolResult.toolName}:`,
-            JSON.stringify(toolResult.result, null, 2)
-          );
-        }
+        console.log("[Tool executed successfully]");
         console.log("");
-
-        // Add tool results to conversation history
-        conversationHistory.push({
-          role: "tool",
-          content: toolResults,
-        });
       }
     } catch (error) {
       if (error instanceof Error) {
