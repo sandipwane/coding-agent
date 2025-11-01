@@ -1,6 +1,7 @@
 import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
-import { streamText } from "ai";
+import { streamText, tool } from "ai";
 import type { ModelMessage } from "ai";
+import { z } from "zod";
 import * as readline from "node:readline";
 
 // Initialize Bedrock with Vercel AI SDK
@@ -31,6 +32,34 @@ const handleExit = () => {
 };
 
 process.on("SIGINT", handleExit);
+
+// Define tools
+const tools = {
+  readFile: tool({
+    description: "Read the contents of a file from the filesystem",
+    parameters: z.object({
+      filePath: z.string().describe("The path to the file to read"),
+    }),
+    execute: async ({ filePath }) => {
+      try {
+        const file = Bun.file(filePath);
+        const exists = await file.exists();
+
+        if (!exists) {
+          return { error: `File not found: ${filePath}` };
+        }
+
+        const content = await file.text();
+        return { content };
+      } catch (error) {
+        if (error instanceof Error) {
+          return { error: `Error reading file: ${error.message}` };
+        }
+        return { error: "Unknown error reading file" };
+      }
+    },
+  }),
+};
 
 async function main() {
   console.log("\n"+"Claude CLI v0.1");
@@ -64,6 +93,7 @@ async function main() {
       const result = await streamText({
         model: bedrock("anthropic.claude-3-5-sonnet-20240620-v1:0"),
         messages: conversationHistory,
+        tools,
       });
 
       // Stream the response to console as it arrives
@@ -72,13 +102,40 @@ async function main() {
         fullResponse += textPart;
       }
 
-      // Store assistant's response in history
-      conversationHistory.push({
+      console.log("\n");
+
+      // Wait for the complete response to get tool calls
+      const { toolCalls, toolResults } = await result;
+
+      // Build assistant message with tool calls if they exist
+      const assistantMessage: ModelMessage = {
         role: "assistant",
         content: fullResponse,
-      });
+      };
 
-      console.log("\n");
+      if (toolCalls && toolCalls.length > 0) {
+        assistantMessage.toolCalls = toolCalls;
+      }
+
+      conversationHistory.push(assistantMessage);
+
+      // If there were tool calls, add tool results to history and show them
+      if (toolResults && toolResults.length > 0) {
+        console.log("[Tool Results]");
+        for (const toolResult of toolResults) {
+          console.log(
+            `  ${toolResult.toolName}:`,
+            JSON.stringify(toolResult.result, null, 2)
+          );
+        }
+        console.log("");
+
+        // Add tool results to conversation history
+        conversationHistory.push({
+          role: "tool",
+          content: toolResults,
+        });
+      }
     } catch (error) {
       if (error instanceof Error) {
         console.error("[Error]:", error.message);
