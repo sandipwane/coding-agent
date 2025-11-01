@@ -3,8 +3,6 @@ import { streamText } from "ai";
 import type { ModelMessage } from "ai";
 import * as readline from "node:readline";
 
-const GOODBYE_MESSAGE = "Goodbye! Have a nice day!";
-
 // Initialize Bedrock with Vercel AI SDK
 const bedrock = createAmazonBedrock({
   region: Bun.env.AWS_REGION || "us-east-1",
@@ -27,12 +25,12 @@ function getUserInput(prompt: string): Promise<string> {
 }
 
 const handleExit = () => {
-  console.log(`${GOODBYE_MESSAGE}`);
+  console.log("Goodbye! Have a nice day!");
   rl.close();
   process.exit(0);
 };
 
-process.on("beforeExit", handleExit);
+process.on("SIGINT", handleExit);
 
 async function main() {
   console.log("\n"+"Claude CLI v0.1");
