@@ -38,7 +38,7 @@ async function main() {
   console.log("\n"+"Claude CLI v0.1");
   console.log("------------------------------------------------");
   console.log("Type your questions and press Enter to chat.");
-  console.log("Type 'exit' or 'quit' to leave the chat.");
+  console.log("Press Ctrl+C to leave the chat.");
   console.log("");
 
   const conversationHistory: ModelMessage[] = [];
@@ -46,13 +46,6 @@ async function main() {
   while (true) {
     try {
       const userMessage = await getUserInput("> ");
-
-      // Check for exit commands
-      const input = userMessage.trim().toLowerCase();
-      if (input === "exit" || input === "quit") {
-        handleExit();
-        break;
-      }
 
       // Skip when user presses Enter
       if (userMessage.trim() === "") {
