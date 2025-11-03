@@ -35,7 +35,7 @@ process.on("SIGINT", handleExit);
 
 // Define tools
 const tools = {
-  readFile: tool({
+  read: tool({
     description: "Read the contents of a file from the filesystem",
     inputSchema: z.object({
       filePath: z.string().describe("The path to the file to read"),
@@ -58,6 +58,36 @@ const tools = {
           return `Error reading file: ${error.message}`;
         }
         return "Unknown error reading file";
+      }
+    },
+  }),
+
+  write: tool({
+    description: "Write content to a file on the filesystem",
+    inputSchema: z.object({
+      filePath: z.string().describe("The path to the file to write"),
+      content: z.string().describe("The content to write to the file"),
+    }),
+    execute: async ({ filePath, content }) => {
+      try {
+        console.log(`\n\n [-] WRITE: ${filePath}\n`);
+
+        const file = Bun.file(filePath);
+        const exists = await file.exists();
+
+        if (exists) {
+          console.log(`    └─ Overwriting existing file\n`);
+        }
+
+        await Bun.write(filePath, content);
+        const bytesWritten = new TextEncoder().encode(content).length;
+
+        return `File written successfully to: ${filePath} (${bytesWritten} bytes)`;
+      } catch (error) {
+        if (error instanceof Error) {
+          return `Error writing file: ${error.message}`;
+        }
+        return "Unknown error writing file";
       }
     },
   }),
