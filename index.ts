@@ -128,7 +128,6 @@ const tools = {
         if (workingDirectory) {
           console.log(`    ├─ Working dir: ${workingDirectory}`);
         }
-        console.log(`    └─ Timeout: ${timeout}ms\n`);
 
         // Execute command using Bun.spawn
         const proc = Bun.spawn(["/bin/sh", "-c", command], {
@@ -163,6 +162,8 @@ const tools = {
 
           // Combine stdout and stderr
           const output = stdout + (stderr ? `\nstderr: ${stderr}` : "");
+
+          console.log(`\n\n [+] ${output}\n`);
 
           return {
             title: command,
