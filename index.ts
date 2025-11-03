@@ -1,6 +1,7 @@
 import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
-import { streamText } from "ai";
+import { streamText, tool, stepCountIs } from "ai";
 import type { ModelMessage } from "ai";
+import { z } from "zod";
 import * as readline from "node:readline";
 
 // Initialize Bedrock with Vercel AI SDK
@@ -32,6 +33,36 @@ const handleExit = () => {
 
 process.on("SIGINT", handleExit);
 
+// Define tools
+const tools = {
+  readFile: tool({
+    description: "Read the contents of a file from the filesystem",
+    inputSchema: z.object({
+      filePath: z.string().describe("The path to the file to read"),
+    }),
+    execute: async ({ filePath }) => {
+      try {
+        console.log(`\n\n [-] READ: ${filePath}\n`);
+
+        const file = Bun.file(filePath);
+        const exists = await file.exists();
+
+        if (!exists) {
+          return `Error: File not found: ${filePath}`;
+        }
+
+        const content = await file.text();
+        return content;
+      } catch (error) {
+        if (error instanceof Error) {
+          return `Error reading file: ${error.message}`;
+        }
+        return "Unknown error reading file";
+      }
+    },
+  }),
+};
+
 async function main() {
   console.log("\n"+"Claude CLI v0.1");
   console.log("------------------------------------------------");
@@ -56,29 +87,33 @@ async function main() {
         content: userMessage,
       });
 
-      // Stream response from Claude via Bedrock
+      // Stream response from Claude via Bedrock with multi-step tool calling
       console.log("");
       process.stdout.write("✶ ");
 
       let fullResponse = "";
-      const result = await streamText({
+      const result = streamText({
         model: bedrock("anthropic.claude-3-5-sonnet-20240620-v1:0"),
         messages: conversationHistory,
+        tools,
+        stopWhen: stepCountIs(25), // Allow up to 25 steps (tool calls + responses)
       });
 
-      // Stream the response to console as it arrives
-      for await (const textPart of result.textStream) {
-        process.stdout.write(textPart);
-        fullResponse += textPart;
+      // Stream ALL text from all steps (including after tool execution)
+      for await (const textPart of result.fullStream) {
+        if (textPart.type === 'text-delta') {
+          process.stdout.write(textPart.text);
+          fullResponse += textPart.text;
+        }
       }
 
-      // Store assistant's response in history
-      conversationHistory.push({
-        role: "assistant",
-        content: fullResponse,
-      });
-
       console.log("\n");
+
+      // Wait for the complete response with all steps
+      const response = await result.response;
+
+      // Add all response messages to conversation history
+      conversationHistory.push(...response.messages);
     } catch (error) {
       if (error instanceof Error) {
         console.error("[Error]:", error.message);
@@ -87,8 +122,6 @@ async function main() {
       }
     }
   }
-
-  rl.close();
 }
 
 main();
