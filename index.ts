@@ -1,5 +1,5 @@
 import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
-import { streamText, tool } from "ai";
+import { streamText, tool, stepCountIs } from "ai";
 import type { ModelMessage } from "ai";
 import { z } from "zod";
 import * as readline from "node:readline";
@@ -42,6 +42,8 @@ const tools = {
     }),
     execute: async ({ filePath }) => {
       try {
+        console.log(`\n\n [-] READ: ${filePath}\n`);
+
         const file = Bun.file(filePath);
         const exists = await file.exists();
 
@@ -85,38 +87,33 @@ async function main() {
         content: userMessage,
       });
 
-      // Stream response from Claude via Bedrock
+      // Stream response from Claude via Bedrock with multi-step tool calling
       console.log("");
       process.stdout.write("✶ ");
 
       let fullResponse = "";
-      const result = await streamText({
+      const result = streamText({
         model: bedrock("anthropic.claude-3-5-sonnet-20240620-v1:0"),
         messages: conversationHistory,
         tools,
+        stopWhen: stepCountIs(25), // Allow up to 25 steps (tool calls + responses)
       });
 
-      // Stream the response to console as it arrives
-      for await (const textPart of result.textStream) {
-        process.stdout.write(textPart);
-        fullResponse += textPart;
+      // Stream ALL text from all steps (including after tool execution)
+      for await (const textPart of result.fullStream) {
+        if (textPart.type === 'text-delta') {
+          process.stdout.write(textPart.text);
+          fullResponse += textPart.text;
+        }
       }
 
       console.log("\n");
 
-      // Wait for the response to get messages (includes tool calls and results)
+      // Wait for the complete response with all steps
       const response = await result.response;
 
       // Add all response messages to conversation history
-      // response.messages includes assistant message with tool calls and tool results
       conversationHistory.push(...response.messages);
-
-      // Show tool results to user if any
-      const toolResults = await result.toolResults;
-      if (toolResults && toolResults.length > 0) {
-        console.log("[Tool executed successfully]");
-        console.log("");
-      }
     } catch (error) {
       if (error instanceof Error) {
         console.error("[Error]:", error.message);
@@ -125,8 +122,6 @@ async function main() {
       }
     }
   }
-
-  rl.close();
 }
 
 main();
