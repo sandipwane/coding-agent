@@ -16,42 +16,131 @@ const rl = readline.createInterface({
   output: process.stdout,
 });
 
-const DIVIDER = '-'.repeat(40);
+// Visual separators and markers
+const UI = {
+  divider: '─'.repeat(50),
+  dot: '•',
+  arrow: '→',
+  check: '✓',
+  cross: '✗',
+  spinner: '⣷⣯⣟⡿⢿⣻⣽⣾',
+  box: {
+    top: '┌─',
+    mid: '├─',
+    bot: '└─',
+    vert: '│',
+  },
+} as const;
+
+// Logger configuration
+const LOG_CONFIG = {
+  indent: '  ',
+  prefixes: {
+    tool: (action: string) => `${UI.box.mid} ${action.toUpperCase()}`,
+    detail: `${UI.box.vert}  `,
+    block: `${UI.box.vert}    `,
+    output: `${UI.box.bot}`,
+    success: `${UI.check}`,
+    error: `${UI.cross}`,
+  },
+  app: {
+    name: 'CHAI CLI',
+    version: 'v0.3',
+  },
+} as const;
+
+// Helper to output with optional formatting
+const output = (message: string, method: 'log' | 'error' = 'log') => console[method](message);
+
+// Helper to format indented block
+const formatBlock = (body: string, indent = LOG_CONFIG.prefixes.block) =>
+  (body.trim() || '(no output)')
+    .split('\n')
+    .map((line) => `${indent}${line}`)
+    .join('\n');
+
+// Track execution times
+const executionTimes = new Map<string, number>();
+
+// Loading indicator state
+let loadingInterval: Timer | undefined;
+let loadingMessage = '';
 
 const logger = {
-  banner() {
-    console.log('\nCHAI CLI v0.3');
-    console.log(DIVIDER);
-    console.log('Type your questions and press Enter to chat.');
-    console.log('Press Ctrl+C to leave the chat.');
-    console.log('');
+  startLoading: (message: string) => {
+    loadingMessage = message;
+    let spinnerIndex = 0;
+    const spinnerChars = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+
+    loadingInterval = setInterval(() => {
+      process.stdout.write(`\r${spinnerChars[spinnerIndex]} ${loadingMessage}`);
+      spinnerIndex = (spinnerIndex + 1) % spinnerChars.length;
+    }, 80);
   },
-  section(title: string) {
-    console.log(`\n${title}`);
-    console.log(DIVIDER);
-  },
-  tool(action: string, target: string) {
-    console.log(`\n\n[${action}] ${target}`);
-  },
-  detail(message: string) {
-    console.log(`    - ${message}`);
-  },
-  block(title: string, body: string) {
-    console.log(`    ${title}:`);
-    const lines = body.trim() === '' ? ['(no output)'] : body.trimEnd().split('\n');
-    for (const line of lines) {
-      console.log(`      ${line}`);
+
+  stopLoading: () => {
+    if (loadingInterval) {
+      clearInterval(loadingInterval);
+      loadingInterval = undefined;
+      // Clear the loading line
+      process.stdout.write('\r' + ' '.repeat(loadingMessage.length + 3) + '\r');
     }
   },
-  success(message: string) {
-    console.log(`[ok] ${message}`);
+  banner: () =>
+    output(
+      [
+        '',
+        `${UI.box.top} ${LOG_CONFIG.app.name} ${LOG_CONFIG.app.version}`,
+        UI.divider,
+        `${UI.dot} Type to chat, Ctrl+C to exit`,
+        '',
+      ].join('\n'),
+    ),
+
+  tool: (action: string, target: string, id?: string) => {
+    logger.stopLoading(); // Stop any existing loading
+    output(`\n${LOG_CONFIG.prefixes.tool(action)} ${target}`);
+    if (id) {
+      executionTimes.set(id, Date.now());
+      logger.startLoading(`${action.toLowerCase()}ing ${target}`);
+    }
   },
-  error(message: string) {
-    console.error(`[error] ${message}`);
+
+  detail: (message: string) => output(`${LOG_CONFIG.prefixes.detail} ${message}`),
+
+  block: (body: string, collapsed = false) => {
+    if (collapsed && body.split('\n').length > 10) {
+      const lines = body.split('\n');
+      const preview = lines.slice(0, 3).join('\n');
+      const remaining = lines.length - 3;
+      output(
+        [
+          `${LOG_CONFIG.prefixes.block}${preview}`,
+          `${LOG_CONFIG.prefixes.detail} ... ${remaining} more lines ...`,
+        ].join('\n'),
+      );
+    } else {
+      output(formatBlock(body, LOG_CONFIG.prefixes.block));
+    }
   },
-  lineBreak() {
-    console.log('\n');
+
+  output: (body: string, id?: string) => {
+    logger.stopLoading(); // Stop loading indicator
+    let timeStr = '';
+    if (id && executionTimes.has(id)) {
+      const elapsed = Date.now() - executionTimes.get(id)!;
+      timeStr = ` (${elapsed}ms)`;
+      executionTimes.delete(id);
+    }
+    output(`${LOG_CONFIG.prefixes.output} output${timeStr}:`);
+    logger.block(body);
   },
+
+  success: (message: string) => output(`  ${LOG_CONFIG.prefixes.success} ${message}`),
+
+  error: (message: string) => output(`  ${LOG_CONFIG.prefixes.error} ${message}`, 'error'),
+
+  lineBreak: () => output(''),
 };
 
 // Helper function to get user input
@@ -142,23 +231,30 @@ const tools = {
       filePath: z.string().describe('The path to the file to read'),
     }),
     execute: async ({ filePath }) => {
+      const toolId = `read-${Date.now()}`;
       try {
-        logger.tool('READ', filePath);
+        logger.tool('READ', filePath, toolId);
 
         const file = Bun.file(filePath);
         const exists = await file.exists();
 
         if (!exists) {
-          return `Error: File not found: ${filePath}`;
+          const error = `Error: File not found: ${filePath}`;
+          logger.output(error, toolId);
+          return error;
         }
 
         const content = await file.text();
+        const lines = content.split('\n').length;
+        logger.output(`${lines} lines read`, toolId);
         return content;
       } catch (error) {
-        if (error instanceof Error) {
-          return `Error reading file: ${error.message}`;
-        }
-        return 'Unknown error reading file';
+        const errorMsg =
+          error instanceof Error
+            ? `Error reading file: ${error.message}`
+            : 'Unknown error reading file';
+        logger.output(errorMsg, toolId);
+        return errorMsg;
       }
     },
   }),
@@ -170,8 +266,9 @@ const tools = {
       content: z.string().describe('The content to write to the file'),
     }),
     execute: async ({ filePath, content }) => {
+      const toolId = `write-${Date.now()}`;
       try {
-        logger.tool('WRITE', filePath);
+        logger.tool('WRITE', filePath, toolId);
 
         const file = Bun.file(filePath);
         const exists = await file.exists();
@@ -183,12 +280,16 @@ const tools = {
         await Bun.write(filePath, content);
         const bytesWritten = new TextEncoder().encode(content).length;
 
-        return `File written successfully to: ${filePath} (${bytesWritten} bytes)`;
+        const result = `File written successfully (${bytesWritten} bytes)`;
+        logger.output(result, toolId);
+        return `${result} to: ${filePath}`;
       } catch (error) {
-        if (error instanceof Error) {
-          return `Error writing file: ${error.message}`;
-        }
-        return 'Unknown error writing file';
+        const errorMsg =
+          error instanceof Error
+            ? `Error writing file: ${error.message}`
+            : 'Unknown error writing file';
+        logger.output(errorMsg, toolId);
+        return errorMsg;
       }
     },
   }),
@@ -210,14 +311,17 @@ const tools = {
         ),
     }),
     execute: async ({ filePath, old_string, new_string, replace_all }) => {
+      const toolId = `diff-${Date.now()}`;
       try {
-        logger.tool('APPLY_DIFF', filePath);
+        logger.tool('APPLY_DIFF', filePath, toolId);
 
         const file = Bun.file(filePath);
         const exists = await file.exists();
 
         if (!exists) {
-          return `Error: File not found: ${filePath}. Use the write tool to create new files.`;
+          const error = `Error: File not found: ${filePath}. Use the write tool to create new files.`;
+          logger.output(error, toolId);
+          return error;
         }
 
         // Read current content
@@ -225,14 +329,17 @@ const tools = {
 
         // Check if old_string exists in the file
         if (!content.includes(old_string)) {
-          return `Error: Could not find the specified text in ${filePath}. Make sure old_string matches exactly (including whitespace and indentation).`;
+          const error = `Error: Could not find the specified text in ${filePath}`;
+          logger.output(error, toolId);
+          return `${error}. Make sure old_string matches exactly (including whitespace and indentation).`;
         }
 
         // Apply the replacement
         let newContent: string;
+        let occurrences = 1;
         if (replace_all) {
           newContent = content.replaceAll(old_string, new_string);
-          const occurrences = content.split(old_string).length - 1;
+          occurrences = content.split(old_string).length - 1;
           logger.detail(`Replacing all ${occurrences} occurrence(s)`);
         } else {
           newContent = content.replace(old_string, new_string);
@@ -247,12 +354,16 @@ const tools = {
         const diff = newSize - oldSize;
         const diffStr = diff >= 0 ? `+${diff}` : `${diff}`;
 
-        return `Diff applied successfully to: ${filePath} (${oldSize} → ${newSize} bytes, ${diffStr})`;
+        const result = `Diff applied (${occurrences} changes, ${diffStr} bytes)`;
+        logger.output(result, toolId);
+        return `${result} to: ${filePath}`;
       } catch (error) {
-        if (error instanceof Error) {
-          return `Error applying diff: ${error.message}`;
-        }
-        return 'Unknown error applying diff';
+        const errorMsg =
+          error instanceof Error
+            ? `Error applying diff: ${error.message}`
+            : 'Unknown error applying diff';
+        logger.output(errorMsg, toolId);
+        return errorMsg;
       }
     },
   }),
@@ -273,6 +384,7 @@ const tools = {
         .describe('Timeout in milliseconds (default: 30000)'),
     }),
     execute: async ({ command, description, workingDirectory, timeout }) => {
+      const toolId = `bash-${Date.now()}`;
       try {
         // Validate working directory if provided
         const cwd = workingDirectory || process.cwd();
@@ -280,6 +392,8 @@ const tools = {
           const dirExists = await Bun.file(workingDirectory).exists();
           if (!dirExists) {
             const errorMsg = `Error: Working directory does not exist: ${workingDirectory}`;
+            logger.tool('BASH', command, toolId);
+            logger.output(errorMsg, toolId);
             return {
               title: command,
               metadata: {
@@ -293,9 +407,9 @@ const tools = {
         }
 
         // Log execution details
-        logger.tool('BASH', command);
+        logger.tool('BASH', command, toolId);
         if (description) {
-          logger.detail(`description: ${description}`);
+          logger.detail(`${description}`);
         }
         if (workingDirectory) {
           logger.detail(`working dir: ${workingDirectory}`);
@@ -335,7 +449,7 @@ const tools = {
           // Combine stdout and stderr
           const output = stdout + (stderr ? `\nstderr: ${stderr}` : '');
 
-          logger.block('output', output || '(no output)');
+          logger.output(output || '(no output)', toolId);
 
           return {
             title: command,
@@ -352,6 +466,7 @@ const tools = {
 
           if (timeoutError instanceof Error && timeoutError.message.includes('timed out')) {
             const errorMsg = timeoutError.message;
+            logger.output(errorMsg, toolId);
             return {
               title: command,
               metadata: {
@@ -370,6 +485,7 @@ const tools = {
             ? `Error executing command: ${error.message}`
             : 'Unknown error executing command';
 
+        logger.output(errorMsg, toolId);
         return {
           title: command,
           metadata: {
@@ -405,7 +521,7 @@ async function main() {
       });
 
       // Stream response from Claude via Bedrock with multi-step tool calling
-      logger.section('CHAI');
+      process.stdout.write('\n* ');
 
       let _fullResponse = '';
       const result = streamText({
@@ -419,7 +535,10 @@ async function main() {
       // Stream ALL text from all steps (including after tool execution)
       for await (const textPart of result.fullStream) {
         if (textPart.type === 'text-delta') {
-          process.stdout.write(textPart.text);
+          // Add asterisk prefix for new lines in CHAI's response
+          const text = textPart.text;
+
+          process.stdout.write(text);
           _fullResponse += textPart.text;
         }
       }
