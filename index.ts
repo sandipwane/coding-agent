@@ -31,7 +31,7 @@ const logger = {
     console.log(DIVIDER);
   },
   tool(action: string, target: string) {
-    console.log(`\n[${action}] ${target}`);
+    console.log(`\n\n[${action}] ${target}`);
   },
   detail(message: string) {
     console.log(`    - ${message}`);
