@@ -52,7 +52,6 @@ const TOOL_DESCRIPTIONS = {
   BASH: ['Execute shell commands on the system'].join(' '),
 } as const;
 
-// System prompt for Claude
 const SYSTEM_PROMPT = `
   You are CHAI: CloudHedge's Agentic Intelligence. You are help users with their coding tasks.
 
@@ -338,7 +337,7 @@ const tools = {
 };
 
 async function main() {
-  console.log('\n' + 'Claude CLI v0.2');
+  console.log('\n' + 'CHAI CLI v0.3');
   console.log('------------------------------------------------');
   console.log('Type your questions and press Enter to chat.');
   console.log('Press Ctrl+C to leave the chat.');

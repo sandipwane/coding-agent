@@ -1,5 +1,6 @@
 {
   "name": "coding-agent",
+  "version": "0.3.0",
   "scripts": {
     "dev": "bun run index.ts",
     "lint": "biome lint .",
