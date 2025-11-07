@@ -16,6 +16,44 @@ const rl = readline.createInterface({
   output: process.stdout,
 });
 
+const DIVIDER = '-'.repeat(40);
+
+const logger = {
+  banner() {
+    console.log('\nCHAI CLI v0.3');
+    console.log(DIVIDER);
+    console.log('Type your questions and press Enter to chat.');
+    console.log('Press Ctrl+C to leave the chat.');
+    console.log('');
+  },
+  section(title: string) {
+    console.log(`\n${title}`);
+    console.log(DIVIDER);
+  },
+  tool(action: string, target: string) {
+    console.log(`\n[${action}] ${target}`);
+  },
+  detail(message: string) {
+    console.log(`    - ${message}`);
+  },
+  block(title: string, body: string) {
+    console.log(`    ${title}:`);
+    const lines = body.trim() === '' ? ['(no output)'] : body.trimEnd().split('\n');
+    for (const line of lines) {
+      console.log(`      ${line}`);
+    }
+  },
+  success(message: string) {
+    console.log(`[ok] ${message}`);
+  },
+  error(message: string) {
+    console.error(`[error] ${message}`);
+  },
+  lineBreak() {
+    console.log('\n');
+  },
+};
+
 // Helper function to get user input
 function getUserInput(prompt: string): Promise<string> {
   return new Promise((resolve) => {
@@ -26,7 +64,7 @@ function getUserInput(prompt: string): Promise<string> {
 }
 
 const handleExit = () => {
-  console.log('Goodbye! Have a nice day!');
+  logger.success('Goodbye! Have a nice day!');
   rl.close();
   process.exit(0);
 };
@@ -95,7 +133,7 @@ const tools = {
     }),
     execute: async ({ filePath }) => {
       try {
-        console.log(`\n\n [-] READ: ${filePath}\n`);
+        logger.tool('READ', filePath);
 
         const file = Bun.file(filePath);
         const exists = await file.exists();
@@ -123,13 +161,13 @@ const tools = {
     }),
     execute: async ({ filePath, content }) => {
       try {
-        console.log(`\n\n [-] WRITE: ${filePath}\n`);
+        logger.tool('WRITE', filePath);
 
         const file = Bun.file(filePath);
         const exists = await file.exists();
 
         if (exists) {
-          console.log(`    └─ Overwriting existing file\n`);
+          logger.detail('Overwriting existing file');
         }
 
         await Bun.write(filePath, content);
@@ -163,7 +201,7 @@ const tools = {
     }),
     execute: async ({ filePath, old_string, new_string, replace_all }) => {
       try {
-        console.log(`\n\n [-] APPLY_DIFF: ${filePath}\n`);
+        logger.tool('APPLY_DIFF', filePath);
 
         const file = Bun.file(filePath);
         const exists = await file.exists();
@@ -185,10 +223,10 @@ const tools = {
         if (replace_all) {
           newContent = content.replaceAll(old_string, new_string);
           const occurrences = content.split(old_string).length - 1;
-          console.log(`    ├─ Replacing all ${occurrences} occurrence(s)\n`);
+          logger.detail(`Replacing all ${occurrences} occurrence(s)`);
         } else {
           newContent = content.replace(old_string, new_string);
-          console.log(`    ├─ Replacing first occurrence\n`);
+          logger.detail('Replacing first occurrence');
         }
 
         // Write the updated content
@@ -245,12 +283,12 @@ const tools = {
         }
 
         // Log execution details
-        console.log(`\n\n [-] BASH: ${command}\n`);
+        logger.tool('BASH', command);
         if (description) {
-          console.log(`    ├─ Description: ${description}`);
+          logger.detail(`description: ${description}`);
         }
         if (workingDirectory) {
-          console.log(`    ├─ Working dir: ${workingDirectory}`);
+          logger.detail(`working dir: ${workingDirectory}`);
         }
 
         // Execute command using Bun.spawn
@@ -287,7 +325,7 @@ const tools = {
           // Combine stdout and stderr
           const output = stdout + (stderr ? `\nstderr: ${stderr}` : '');
 
-          console.log(`\n\n [+] ${output}\n`);
+          logger.block('output', output || '(no output)');
 
           return {
             title: command,
@@ -337,11 +375,7 @@ const tools = {
 };
 
 async function main() {
-  console.log('\n' + 'CHAI CLI v0.3');
-  console.log('------------------------------------------------');
-  console.log('Type your questions and press Enter to chat.');
-  console.log('Press Ctrl+C to leave the chat.');
-  console.log('');
+  logger.banner();
 
   const conversationHistory: ModelMessage[] = [];
 
@@ -361,8 +395,7 @@ async function main() {
       });
 
       // Stream response from Claude via Bedrock with multi-step tool calling
-      console.log('');
-      process.stdout.write('✶ ');
+      logger.section('CHAI');
 
       let _fullResponse = '';
       const result = streamText({
@@ -381,7 +414,8 @@ async function main() {
         }
       }
 
-      console.log('\n');
+      // need to have a line break after the response
+      logger.lineBreak();
 
       // Wait for the complete response with all steps
       const response = await result.response;
@@ -390,9 +424,9 @@ async function main() {
       conversationHistory.push(...response.messages);
     } catch (error) {
       if (error instanceof Error) {
-        console.error('[Error]:', error.message);
+        logger.error(error.message);
       } else {
-        console.error('[Error]: An unknown error occurred');
+        logger.error('An unknown error occurred');
       }
     }
   }
