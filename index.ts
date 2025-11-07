@@ -63,7 +63,7 @@ const tools = {
   }),
 
   write: tool({
-    description: "Write content to a file on the filesystem",
+    description: "Write content to a file on the filesystem. Use this for creating new files or completely replacing file contents. For editing existing files, prefer using apply_diff instead.",
     inputSchema: z.object({
       filePath: z.string().describe("The path to the file to write"),
       content: z.string().describe("The content to write to the file"),
@@ -88,6 +88,62 @@ const tools = {
           return `Error writing file: ${error.message}`;
         }
         return "Unknown error writing file";
+      }
+    },
+  }),
+
+  apply_diff: tool({
+    description: "Apply a diff to an existing file by replacing specific content. This is more efficient than rewriting entire files. Provide the exact text to find (old_string) and what to replace it with (new_string).",
+    inputSchema: z.object({
+      filePath: z.string().describe("The path to the file to edit"),
+      old_string: z.string().describe("The exact text to find and replace (must match exactly including whitespace)"),
+      new_string: z.string().describe("The new text to replace the old text with"),
+      replace_all: z.boolean().optional().default(false).describe("If true, replace all occurrences. If false, only replace the first occurrence (default: false)"),
+    }),
+    execute: async ({ filePath, old_string, new_string, replace_all }) => {
+      try {
+        console.log(`\n\n [-] APPLY_DIFF: ${filePath}\n`);
+
+        const file = Bun.file(filePath);
+        const exists = await file.exists();
+
+        if (!exists) {
+          return `Error: File not found: ${filePath}. Use the write tool to create new files.`;
+        }
+
+        // Read current content
+        const content = await file.text();
+
+        // Check if old_string exists in the file
+        if (!content.includes(old_string)) {
+          return `Error: Could not find the specified text in ${filePath}. Make sure old_string matches exactly (including whitespace and indentation).`;
+        }
+
+        // Apply the replacement
+        let newContent: string;
+        if (replace_all) {
+          newContent = content.replaceAll(old_string, new_string);
+          const occurrences = content.split(old_string).length - 1;
+          console.log(`    ├─ Replacing all ${occurrences} occurrence(s)\n`);
+        } else {
+          newContent = content.replace(old_string, new_string);
+          console.log(`    ├─ Replacing first occurrence\n`);
+        }
+
+        // Write the updated content
+        await Bun.write(filePath, newContent);
+
+        const oldSize = new TextEncoder().encode(content).length;
+        const newSize = new TextEncoder().encode(newContent).length;
+        const diff = newSize - oldSize;
+        const diffStr = diff >= 0 ? `+${diff}` : `${diff}`;
+
+        return `Diff applied successfully to: ${filePath} (${oldSize} → ${newSize} bytes, ${diffStr})`;
+      } catch (error) {
+        if (error instanceof Error) {
+          return `Error applying diff: ${error.message}`;
+        }
+        return "Unknown error applying diff";
       }
     },
   }),
