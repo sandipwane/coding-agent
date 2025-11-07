@@ -16,6 +16,13 @@ const rl = readline.createInterface({
   output: process.stdout,
 });
 
+// ANSI color codes
+const COLORS = {
+  red: '\x1b[31m',
+  green: '\x1b[32m',
+  reset: '\x1b[0m',
+} as const;
+
 // Visual separators and markers
 const UI = {
   divider: '─'.repeat(50),
@@ -29,6 +36,10 @@ const UI = {
     mid: '├─',
     bot: '└─',
     vert: '│',
+  },
+  diff: {
+    removed: '-',
+    added: '+',
   },
 } as const;
 
@@ -139,6 +150,21 @@ const logger = {
   success: (message: string) => output(`  ${LOG_CONFIG.prefixes.success} ${message}`),
 
   error: (message: string) => output(`  ${LOG_CONFIG.prefixes.error} ${message}`, 'error'),
+
+  diff: (oldText: string, newText: string) => {
+    const oldLines = oldText.split('\n');
+    const newLines = newText.split('\n');
+
+    // Show removed lines in red
+    oldLines.forEach(line => {
+      output(`${LOG_CONFIG.prefixes.detail} ${COLORS.red}${UI.diff.removed} ${line}${COLORS.reset}`);
+    });
+
+    // Show added lines in green
+    newLines.forEach(line => {
+      output(`${LOG_CONFIG.prefixes.detail} ${COLORS.green}${UI.diff.added} ${line}${COLORS.reset}`);
+    });
+  },
 
   lineBreak: () => output(''),
 };
@@ -333,6 +359,9 @@ const tools = {
           logger.output(error, toolId);
           return `${error}. Make sure old_string matches exactly (including whitespace and indentation).`;
         }
+
+        // Show the diff before applying changes
+        logger.diff(old_string, new_string);
 
         // Apply the replacement
         let newContent: string;
