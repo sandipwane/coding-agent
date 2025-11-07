@@ -35,7 +35,7 @@ process.on('SIGINT', handleExit);
 
 // Tool descriptions as constants for better readability
 const TOOL_DESCRIPTIONS = {
-  READ: ['Read the contents of a file from the filesystem'].join(' '),
+  READ: 'Read the contents of a file from the filesystem',
 
   WRITE: [
     'Write content to a file on the filesystem.',
@@ -49,7 +49,7 @@ const TOOL_DESCRIPTIONS = {
     'Provide the exact text to find (old_string) and what to replace it with (new_string).',
   ].join(' '),
 
-  BASH: ['Execute shell commands on the system'].join(' '),
+  BASH: 'Execute shell commands on the system',
 } as const;
 
 const SYSTEM_PROMPT = `
