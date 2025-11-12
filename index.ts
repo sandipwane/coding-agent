@@ -163,7 +163,8 @@ const tools = {
           // Combine stdout and stderr
           const output = stdout + (stderr ? `\nstderr: ${stderr}` : "");
 
-          console.log(`\n\n [+] ${output}\n`);
+          console.log(`\n\n [+] ${command}\n`);
+          console.log(`\n\n ${output}\n`);
 
           return {
             title: command,
