@@ -212,7 +212,7 @@ const tools = {
 };
 
 async function main() {
-  console.log("\n"+"Claude CLI v0.1");
+  console.log("\n"+"CHAI CLI v0.1");
   console.log("------------------------------------------------");
   console.log("Type your questions and press Enter to chat.");
   console.log("Press Ctrl+C to leave the chat.");
